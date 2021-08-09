@@ -1,4 +1,5 @@
 use isahc::{HttpClient, config::CaCertificate, config::ClientCertificate, config::PrivateKey, config::Configurable, config::SslOption, Request};
+use serde::{Serialize, ser::Serializer};
 use std::{io::Read, io::Write};
 use k8s_openapi::api::core::v1 as api;
 use crate::errors::KubernetesError;
@@ -72,8 +73,7 @@ impl Kubernetes {
         )
     }
 
-    //fn list_pods(&self, namespace: String) -> std::io::Result<Vec<api::Pod>>{
-    pub fn list_pods(&self, namespace: String) -> Result<Vec<String>, KubernetesError>{
+    pub fn list_pods(&self, namespace: String) -> Result<Vec<api::Pod>, KubernetesError>{
         let (request, response_body) = match api::Pod::list_namespaced_pod(&namespace, Default::default()) {
             Ok((request, response_body)) => (request, response_body),
             Err(err) => return Err(KubernetesError::ApiRequestError { source: err }),
@@ -88,20 +88,29 @@ impl Kubernetes {
         if !status_code.is_success(){
             return Err(KubernetesError::HttpClientRequestError);
         }
-        //let mut response_body = response_body(status_code);
-        let mut buf = String::new();
-        let mut pods_list = vec![];
-        let read = response.body_mut().read_to_string(&mut buf);
-        match read {
-            Ok(res) => {
-                pods_list.push(buf.clone());
-            },
-            Err(err) => eprintln!("ERR got {}", err),
-        }
-        //for pod in &pods_list {
-        //    println!("{:#?}", pod);
-        //}
+        let mut response_body = response_body(status_code);
+        let mut buf = Box::new([0u8; 4096]);
+        let mut body = response.into_body();
+        let pods_list_raw = loop {
+            let read = body.read(&mut *buf).map_err(|err| KubernetesError::HttpClientParseResponseError { message : format!("Got error : {}", err)})?;
+            response_body.append_slice(&buf[..read]);
+            let response = response_body.parse();            
+            match response {
+                Ok(k8s_openapi::ListResponse::Ok(pod_list)) => 
+                    break pod_list,
+                Ok(other) => return Err(
+                    KubernetesError::HttpClientParseResponseError {
+                        message : format!("expected Ok but got {} {:?}",status_code, other)
+                    }),
+                Err(k8s_openapi::ResponseError::NeedMoreData) => continue,
+                Err(err) => return Err(
+                    KubernetesError::HttpClientParseResponseError {
+                        message: format!("error: {} {:?}",status_code, err)
+                    }),
+            }
 
-        Ok(pods_list)
+        };
+
+        Ok(pods_list_raw.items)
     }
 }
