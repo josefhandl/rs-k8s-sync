@@ -2,7 +2,7 @@
 edition = "2018"
 name = "k8s-sync"
 description = "Minimalistic, synchronous, read-only client for kubernetes cluster API, from a node, through local api server endpoint"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Benoit Petit <bpetit@hubblo.org>"]
 license = "Apache-2.0"
 homepage = "https://github.com/bpetit/rs-k8s-sync"
