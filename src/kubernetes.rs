@@ -9,14 +9,12 @@ use tempfile::NamedTempFile;
 
 #[derive(Debug)]
 pub struct Kubernetes {
-    token: Option<String>,
     pub kubeconfig: Result<KubeConfig, KubernetesError>,
     pub http_client: HttpClient,
 }
 
 impl Kubernetes {
     pub fn connect(kubeconfig_path: Option<String>) -> Result<Kubernetes, KubernetesError> {
-        let token = None;
         let kubeconfig = KubeConfig::load(kubeconfig_path);
         let http_client;
         if let Ok(conf) = &kubeconfig {
@@ -66,7 +64,6 @@ impl Kubernetes {
 
         Ok(
             Kubernetes {
-                token,
                 kubeconfig,
                 http_client
             }

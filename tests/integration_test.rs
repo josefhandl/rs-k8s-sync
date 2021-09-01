@@ -18,10 +18,10 @@ fn list_pods() {
         let pods = c.list_pods(String::from("kube-system"));
         assert!(pods.is_ok());
         let pods_raw = pods.unwrap();
-        println!("POD : {:?}", pods_raw.first().unwrap());
-        //for p in pods_raw {
-        //    println!("POD : {}", p);
-        //}
+        if !pods_raw.is_empty() {
+            let first = pods_raw.first().unwrap();
+            println!("POD : {:?}", first);
+        }
     } else {
         eprintln!("Couldn't connect to cluster");
     }
