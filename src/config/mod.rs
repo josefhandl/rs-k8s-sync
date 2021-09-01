@@ -34,24 +34,7 @@ impl KubeConfig {
         println!("Loading conf with serde");
         let config = serde_yaml::from_reader(f).map_err(|_| KubernetesError::ConfigLoadError)?;
         Ok(config)
-        //Ok(
-        //    KubeConfig {
-        //        kind: None,
-        //        api_version: None,
-        //        preferences: None,
-        //        clusters: vec![],
-        //        auth_infos: vec![],
-        //        contexts: vec![],
-        //        current_context: String::new(),
-        //        extensions: None
-        //    }
-        //)
     }
-    //pub fn load_config<P: AsRef<Path>>(path: P) -> Result<KubeConfig, std::io::Error> {
-    //    let f = File::open(path)?;
-    //    let config = serde_yaml::from_reader(f)?;
-    //    Ok(config)
-    //}
 }
 
 /// Preferences stores extensions for cli.
