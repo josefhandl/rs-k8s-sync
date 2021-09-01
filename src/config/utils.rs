@@ -3,10 +3,10 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+use crate::errors::KubernetesError;
 use base64;
 use chrono::{DateTime, Utc};
 use dirs::home_dir;
-use crate::errors::KubernetesError;
 
 const KUBECONFIG: &str = "KUBECONFIG";
 
@@ -25,11 +25,14 @@ pub fn data_or_file_with_base64<P: AsRef<Path>>(
     file: &Option<P>,
 ) -> Result<Vec<u8>, KubernetesError> {
     match (data, file) {
-        (Some(d), _) => base64::decode(&d).map_err(|err| KubernetesError::Base64DecodeError { source: err }),
+        (Some(d), _) => {
+            base64::decode(&d).map_err(|err| KubernetesError::Base64DecodeError { source: err })
+        }
         (_, Some(f)) => {
             let mut b = vec![];
             let mut ff = File::open(f).map_err(|err| KubernetesError::IoError { source: err })?;
-            ff.read_to_end(&mut b).map_err(|err| KubernetesError::IoError{ source: err })?;
+            ff.read_to_end(&mut b)
+                .map_err(|err| KubernetesError::IoError { source: err })?;
             Ok(b)
         }
         _ => Err(KubernetesError::InvalidDataError),
@@ -48,7 +51,10 @@ pub fn data_or_file<P: AsRef<Path>>(
             ff.read_to_string(&mut s)?;
             Ok(s)
         }
-        _ => Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to get data/file")),
+        _ => Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Failed to get data/file",
+        )),
     }
 }
 
@@ -67,9 +73,9 @@ fn test_kubeconfig_path() {
 
 #[cfg(test)]
 mod tests {
-    use tempfile;
     use crate::config::utils;
     use std::io::Write;
+    use tempfile;
 
     #[test]
     fn test_data_or_file() {

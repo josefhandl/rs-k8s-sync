@@ -1,13 +1,11 @@
 pub mod utils;
 
-use crate::config::utils::kubeconfig_path;
 use crate::errors::KubernetesError;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_yaml;
 use std::collections::HashMap;
 use std::fs::File;
-use std::path::{PathBuf, Path};
-
+use std::path::PathBuf;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct KubeConfig {
@@ -29,9 +27,10 @@ impl KubeConfig {
         let mut kubeconfig_path = PathBuf::new();
         match path {
             Some(p) => kubeconfig_path.push(p),
-            None => kubeconfig_path.push("~/.kube/config"), 
+            None => kubeconfig_path.push("~/.kube/config"),
         }
-        let f = File::open(kubeconfig_path).map_err(|err| KubernetesError::IoError{source: err})?;
+        let f =
+            File::open(kubeconfig_path).map_err(|err| KubernetesError::IoError { source: err })?;
         println!("Loading conf with serde");
         let config = serde_yaml::from_reader(f).map_err(|_| KubernetesError::ConfigLoadError)?;
         Ok(config)
