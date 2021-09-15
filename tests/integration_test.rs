@@ -3,7 +3,7 @@ use k8s_sync;
 #[test]
 fn read_config() {
     let client =
-        k8s_sync::kubernetes::Kubernetes::connect(Some(String::from("tests/fixtures/kubeconfig")));
+        k8s_sync::kubernetes::Kubernetes::connect(Some(String::from("tests/fixtures/kubeconfig")), None, None, None, false);
     assert!(client.is_ok());
     let client = client.unwrap();
     assert!(client.kubeconfig.is_ok());
@@ -14,7 +14,7 @@ fn read_config() {
 #[test]
 fn list_pods() {
     let client =
-        k8s_sync::kubernetes::Kubernetes::connect(Some(String::from("/root/.kube/config")));
+        k8s_sync::kubernetes::Kubernetes::connect(Some(String::from("/root/.kube/config")), None, None, None, false);
     println!("Connecting to cluter");
     if let Ok(c) = client {
         let pods = c.list_pods(String::from("kube-system"));
