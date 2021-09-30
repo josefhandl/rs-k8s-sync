@@ -96,7 +96,6 @@ impl Kubernetes {
             if let Ok(host_var) = env::var("KUBERNETES_SERVICE_HOST") {
                 host_part = host_var;
             } else {
-                eprintln!("Couldn't determine kubernetes service host from environment.");
                 host_part = host.unwrap_or(String::from("localhost"));
             }
             if let Ok(port_var) = env::var("KUBERNETES_SERVICE_PORT") {
@@ -109,7 +108,6 @@ impl Kubernetes {
             } else {
                 scheme_part = String::from("https");
                 port_part = port.unwrap_or(6443).to_string();
-                eprintln!("Couldn't determine kubernetes services port from environment.");
             }
         } else {
             scheme_part = scheme.unwrap_or(String::from("https"));
@@ -135,7 +133,6 @@ impl Kubernetes {
             }
         })?;
         let response = self.http_client.send(request).map_err(|_| KubernetesError::HttpClientRequestError)?;
-        println!("Got the response: {:?}", response);
         let status_code = response.status();
         if !status_code.is_success() {
             return Err(KubernetesError::HttpClientRequestError);
@@ -220,7 +217,6 @@ impl Kubernetes {
             .http_client
             .send(request)
             .map_err(|_| KubernetesError::HttpClientRequestError)?;
-        println!("Got the response: {:?}", response);
         let status_code = response.status();
         if !status_code.is_success() {
             return Err(KubernetesError::HttpClientRequestError);
