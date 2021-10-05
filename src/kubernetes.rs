@@ -11,6 +11,9 @@ use k8s_openapi::{api::core::v1 as api, ResponseBody};
 use std::env;
 use std::{io::Read, io::Write};
 use tempfile::NamedTempFile;
+use chrono::DateTime;
+use std::env;
+use std::fs;
 
 #[derive(Debug)]
 pub struct Kubernetes {
@@ -28,8 +31,23 @@ impl Kubernetes {
         search_uri: bool,
     ) -> Result<Kubernetes, KubernetesError> {
         let kubeconfig = KubeConfig::load(kubeconfig_path);
+        let token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token";
         let http_client;
-        if let Ok(conf) = &kubeconfig {
+
+        if std::path::Path::new(token_file).exists() {
+            let service_account_token = fs::read_to_string(token_file)
+            .map_err(|err| KubernetesError::IoError { source: err })?;
+    
+            let http_client_builder = HttpClient::builder()
+            .default_header("Authorization", format!("Bearer {}", service_account_token))
+            .ssl_ca_certificate(CaCertificate::file("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"))            
+            .ssl_options(SslOption::DANGER_ACCEPT_INVALID_CERTS);
+    
+            http_client = match http_client_builder.build() {
+                Ok(client) => client,
+                Err(err) => return Err(KubernetesError::HttpClientBuildError { message: format!("Failed to initialize http client with service account token: {}", err) })
+            };
+        } else if let Ok(conf) = &kubeconfig {
             //TODO add options, guessed from config
             if let Some(cluster) = conf.clusters.first() {
                 if let Some(auth_info) = conf.auth_infos.first() {
