@@ -2,6 +2,7 @@ use crate::config::KubeConfig;
 use crate::errors::KubernetesError;
 use base64;
 use chrono::DateTime;
+use chrono::DateTime;
 use http::StatusCode;
 use isahc::{
     config::CaCertificate, config::ClientCertificate, config::Configurable, config::PrivateKey,
@@ -9,11 +10,10 @@ use isahc::{
 };
 use k8s_openapi::{api::core::v1 as api, ResponseBody};
 use std::env;
-use std::{io::Read, io::Write};
-use tempfile::NamedTempFile;
-use chrono::DateTime;
 use std::env;
 use std::fs;
+use std::{io::Read, io::Write};
+use tempfile::NamedTempFile;
 
 #[derive(Debug)]
 pub struct Kubernetes {
@@ -36,16 +36,25 @@ impl Kubernetes {
 
         if std::path::Path::new(token_file).exists() {
             let service_account_token = fs::read_to_string(token_file)
-            .map_err(|err| KubernetesError::IoError { source: err })?;
-    
+                .map_err(|err| KubernetesError::IoError { source: err })?;
+
             let http_client_builder = HttpClient::builder()
-            .default_header("Authorization", format!("Bearer {}", service_account_token))
-            .ssl_ca_certificate(CaCertificate::file("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"))            
-            .ssl_options(SslOption::DANGER_ACCEPT_INVALID_CERTS);
-    
+                .default_header("Authorization", format!("Bearer {}", service_account_token))
+                .ssl_ca_certificate(CaCertificate::file(
+                    "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+                ))
+                .ssl_options(SslOption::DANGER_ACCEPT_INVALID_CERTS);
+
             http_client = match http_client_builder.build() {
                 Ok(client) => client,
-                Err(err) => return Err(KubernetesError::HttpClientBuildError { message: format!("Failed to initialize http client with service account token: {}", err) })
+                Err(err) => {
+                    return Err(KubernetesError::HttpClientBuildError {
+                        message: format!(
+                            "Failed to initialize http client with service account token: {}",
+                            err
+                        ),
+                    })
+                }
             };
         } else if let Ok(conf) = &kubeconfig {
             //TODO add options, guessed from config
