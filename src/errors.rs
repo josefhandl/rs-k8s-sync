@@ -12,7 +12,7 @@ pub enum KubernetesError {
     Base64DecodeError { source: base64::DecodeError },
     InvalidDataError,
     ConfigLoadError,
-    WrongDatetimeFormat { source : chrono::ParseError }
+    WrongDatetimeFormat { source: chrono::ParseError },
 }
 
 impl std::error::Error for KubernetesError {}
@@ -41,7 +41,7 @@ impl std::fmt::Display for KubernetesError {
             KubernetesError::ConfigLoadError => write!(f, "Could not load Kube Config."),
             KubernetesError::ApiRequestError { source } => {
                 write!(f, "API returned error: {}.", source)
-            },
+            }
             KubernetesError::WrongDatetimeFormat { source } => {
                 write!(f, "Couldn't parse date time input : {}", source)
             }
