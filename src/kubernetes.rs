@@ -1,16 +1,16 @@
 use crate::config::KubeConfig;
 use crate::errors::KubernetesError;
 use base64;
+use chrono::DateTime;
+use http::StatusCode;
 use isahc::{
     config::CaCertificate, config::ClientCertificate, config::Configurable, config::PrivateKey,
-    config::SslOption, HttpClient, Request, Body
+    config::SslOption, Body, HttpClient, Request,
 };
-use http::StatusCode;
-use k8s_openapi::{ResponseBody, api::core::v1 as api};
+use k8s_openapi::{api::core::v1 as api, ResponseBody};
+use std::env;
 use std::{io::Read, io::Write};
 use tempfile::NamedTempFile;
-use chrono::DateTime;
-use std::env;
 
 #[derive(Debug)]
 pub struct Kubernetes {
@@ -20,7 +20,13 @@ pub struct Kubernetes {
 }
 
 impl Kubernetes {
-    pub fn connect(kubeconfig_path: Option<String>, scheme: Option<String>, host: Option<String>, port: Option<u32>, search_uri: bool) -> Result<Kubernetes, KubernetesError> {
+    pub fn connect(
+        kubeconfig_path: Option<String>,
+        scheme: Option<String>,
+        host: Option<String>,
+        port: Option<u32>,
+        search_uri: bool,
+    ) -> Result<Kubernetes, KubernetesError> {
         let kubeconfig = KubeConfig::load(kubeconfig_path);
         let http_client;
         if let Ok(conf) = &kubeconfig {
@@ -103,7 +109,7 @@ impl Kubernetes {
                 scheme_part = match port_part.as_str() {
                     "443" => String::from("https"),
                     "80" => String::from("http"),
-                    _ => String::from("https")
+                    _ => String::from("https"),
                 }
             } else {
                 scheme_part = String::from("https");
@@ -120,11 +126,15 @@ impl Kubernetes {
         Ok(Kubernetes {
             kubeconfig,
             http_client,
-            base_uri
+            base_uri,
         })
     }
 
-    fn request<T>(&self, request: Request<Vec<u8>>, response_body: fn(StatusCode)->ResponseBody<T>) -> Result<(Body, ResponseBody<T>), KubernetesError>{
+    fn request<T>(
+        &self,
+        request: Request<Vec<u8>>,
+        response_body: fn(StatusCode) -> ResponseBody<T>,
+    ) -> Result<(Body, ResponseBody<T>), KubernetesError> {
         let (parts, body) = request.into_parts();
         let uri_str = format!("{}{}", self.base_uri, parts.uri);
         let request = Request::builder().uri(uri_str).body(body).map_err(|err| {
@@ -132,7 +142,10 @@ impl Kubernetes {
                 message: format!("Couldn't build request. Error: {:?}", err),
             }
         })?;
-        let response = self.http_client.send(request).map_err(|_| KubernetesError::HttpClientRequestError)?;
+        let response = self
+            .http_client
+            .send(request)
+            .map_err(|_| KubernetesError::HttpClientRequestError)?;
         let status_code = response.status();
         if !status_code.is_success() {
             return Err(KubernetesError::HttpClientRequestError);
@@ -151,7 +164,7 @@ impl Kubernetes {
         let (mut body, mut response_body) = self.request(request, response_body)?;
         let mut buf = Box::new([0u8; 4096]);
         let events_list_raw = loop {
-            let read = body.read(&mut * buf).map_err(|err| {
+            let read = body.read(&mut *buf).map_err(|err| {
                 KubernetesError::HttpClientParseResponseError {
                     message: format!("Got error: {}", err),
                 }
@@ -176,28 +189,28 @@ impl Kubernetes {
         let events = events_list_raw.items;
         let mut since_datetime = None;
         if let Some(since) = since {
-            since_datetime = Some(DateTime::parse_from_rfc3339(&since).map_err(|source| KubernetesError::WrongDatetimeFormat{ source })?);
+            since_datetime = Some(
+                DateTime::parse_from_rfc3339(&since)
+                    .map_err(|source| KubernetesError::WrongDatetimeFormat { source })?,
+            );
         }
-        Ok(
-            events.into_iter().filter(
-                move |e| {
-                    match &e.event_time {
-                        Some(time) => {
-                            if let Some(since_dt) = since_datetime {
-                                if time.0.ge(&since_dt){
-                                    return true
-                                } else {
-                                    return false
-                                }
-                            } else {
-                                return true
-                            }
-                        },
-                        None => false
+        Ok(events
+            .into_iter()
+            .filter(move |e| match &e.event_time {
+                Some(time) => {
+                    if let Some(since_dt) = since_datetime {
+                        if time.0.ge(&since_dt) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        return true;
                     }
                 }
-            ).collect()
-        )
+                None => false,
+            })
+            .collect())
     }
 
     pub fn list_pods(&self, namespace: String) -> Result<Vec<api::Pod>, KubernetesError> {
