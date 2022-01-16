@@ -2,14 +2,12 @@ use crate::config::KubeConfig;
 use crate::errors::KubernetesError;
 use base64;
 use chrono::DateTime;
-use chrono::DateTime;
 use http::StatusCode;
 use isahc::{
     config::CaCertificate, config::ClientCertificate, config::Configurable, config::PrivateKey,
     config::SslOption, Body, HttpClient, Request,
 };
-use k8s_openapi::{api::core::v1 as api, ResponseBody};
-use std::env;
+use k8s_openapi::{api::core::v1 as api, ListOptional, ResponseBody};
 use std::env;
 use std::fs;
 use std::{io::Read, io::Write};
@@ -240,9 +238,9 @@ impl Kubernetes {
             .collect())
     }
 
-    pub fn list_pods(&self, namespace: String) -> Result<Vec<api::Pod>, KubernetesError> {
+    pub fn list_pods(&self, namespace: String, optional: ListOptional<>) -> Result<Vec<api::Pod>, KubernetesError> {
         let (request, response_body) =
-            match api::Pod::list_namespaced_pod(&namespace, Default::default()) {
+            match api::Pod::list_namespaced_pod(&namespace, optional) {
                 Ok((request, response_body)) => (request, response_body),
                 Err(err) => return Err(KubernetesError::ApiRequestError { source: err }),
             };
