@@ -25,9 +25,9 @@ fn list_pods() {
         None,
         false,
     );
-    println!("Connecting to cluter");
+    println!("Connecting to cluster");
     if let Ok(c) = client {
-        let pods = c.list_pods(String::from("kube-system"));
+        let pods = c.list_pods(String::from("kube-system"), Default::default());
         assert!(pods.is_ok());
         let pods_raw = pods.unwrap();
         if !pods_raw.is_empty() {
