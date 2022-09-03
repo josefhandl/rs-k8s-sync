@@ -127,7 +127,7 @@ impl Kubernetes {
             if let Ok(host_var) = env::var("KUBERNETES_SERVICE_HOST") {
                 host_part = host_var;
             } else {
-                host_part = host.unwrap_or(String::from("localhost"));
+                host_part = host.unwrap_or_else(|| String::from("localhost"));
             }
             if let Ok(port_var) = env::var("KUBERNETES_SERVICE_PORT") {
                 port_part = port_var;
@@ -141,8 +141,8 @@ impl Kubernetes {
                 port_part = port.unwrap_or(6443).to_string();
             }
         } else {
-            scheme_part = scheme.unwrap_or(String::from("https"));
-            host_part = host.unwrap_or(String::from("localhost"));
+            scheme_part = scheme.unwrap_or_else(|| String::from("https"));
+            host_part = host.unwrap_or_else(|| String::from("localhost"));
             port_part = port.unwrap_or(6443).to_string();
         }
 
@@ -224,13 +224,9 @@ impl Kubernetes {
             .filter(move |e| match &e.event_time {
                 Some(time) => {
                     if let Some(since_dt) = since_datetime {
-                        if time.0.ge(&since_dt) {
-                            return true;
-                        } else {
-                            return false;
-                        }
+                        time.0.ge(&since_dt)
                     } else {
-                        return true;
+                        true
                     }
                 }
                 None => false,
