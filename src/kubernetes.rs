@@ -234,12 +234,15 @@ impl Kubernetes {
             .collect())
     }
 
-    pub fn list_pods(&self, namespace: String, optional: ListOptional<>) -> Result<Vec<api::Pod>, KubernetesError> {
-        let (request, response_body) =
-            match api::Pod::list_namespaced_pod(&namespace, optional) {
-                Ok((request, response_body)) => (request, response_body),
-                Err(err) => return Err(KubernetesError::ApiRequestError { source: err }),
-            };
+    pub fn list_pods(
+        &self,
+        namespace: String,
+        optional: ListOptional,
+    ) -> Result<Vec<api::Pod>, KubernetesError> {
+        let (request, response_body) = match api::Pod::list_namespaced_pod(&namespace, optional) {
+            Ok((request, response_body)) => (request, response_body),
+            Err(err) => return Err(KubernetesError::ApiRequestError { source: err }),
+        };
         let (parts, body) = request.into_parts();
         let uri_str = format!("{}{}", self.base_uri, parts.uri);
         let request = Request::builder().uri(uri_str).body(body).map_err(|err| {
