@@ -8,5 +8,5 @@ Documentation is available [here](https://docs.rs/k8s-sync).
 
 ```
 [dependencies]
-rs-k8s-sync = "0.1.0"
+rs-k8s-sync = "0.2.2"
 ```
