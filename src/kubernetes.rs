@@ -13,6 +13,14 @@ use std::fs;
 use std::{io::Read, io::Write};
 use tempfile::NamedTempFile;
 
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+struct PodList {
+    items: Vec<api::Pod>,
+}
+
+
 #[derive(Debug)]
 pub struct Kubernetes {
     pub kubeconfig: Result<KubeConfig, KubernetesError>,
@@ -287,4 +295,48 @@ impl Kubernetes {
 
         Ok(pods_list_raw.items)
     }
+
+    pub fn list_all_pods(&self) -> Result<Vec<api::Pod>, KubernetesError> {
+        let (request, response_body) =
+            match api::Pod::list_pod_for_all_namespaces(Default::default()) {
+                Ok((request, response_body)) => (request, response_body),
+                Err(err) => return Err(KubernetesError::ApiRequestError { source: err }),
+            };
+
+        let (parts, body) = request.into_parts();
+        let uri_str = format!("{}{}", self.base_uri, parts.uri);
+        let request = Request::builder().uri(uri_str).body(body).map_err(|err| {
+            KubernetesError::HttpClientBuildError {
+                message: format!("Couldn't build request. Error: {:?}", err),
+            }
+        })?;
+
+        let response = self
+            .http_client
+            .send(request)
+            .map_err(|_| KubernetesError::HttpClientRequestError)?;
+
+        let status_code = response.status();
+        if !status_code.is_success() {
+            return Err(KubernetesError::HttpClientRequestError);
+        }
+
+        let mut body = response.into_body();
+        let mut raw_response = Vec::new();
+        body.read_to_end(&mut raw_response).map_err(|err| {
+            KubernetesError::HttpClientParseResponseError {
+                message: format!("Error reading response body: {:?}", err),
+            }
+        })?;
+
+        let pod_list: PodList = serde_json::from_slice(&raw_response).map_err(|err| {
+            KubernetesError::HttpClientParseResponseError {
+                message: format!("Error deserializing JSON: {:?}", err),
+            }
+        })?;
+
+        Ok(pod_list.items)
+    }
+
+
 }
